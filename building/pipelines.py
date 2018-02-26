@@ -45,8 +45,8 @@ class BuildingPipeline(object):
         if result:
             print("Item already stored in db: %s" % item)
         else:
-            sql = "insert into auctioning_item(id, url, title, sell_start, sell_end, type, state) values(%s, %s, %s, %s, %s, %s, %s)"
-            params = (item['id'], item['url'], item['title'], item['start'], item['end'], '01', '00')
+            sql = "insert into auctioning_item(id, url, title, sell_start, sell_end, type, state, province, city) values(%s, %s, %s, %s, %s, %s, %s, %s, %s)"
+            params = (item['id'], item['url'], item['title'], item['start'], item['end'], '01', '00', '浙江', '杭州')
             tx.execute(sql, params)
 
     # 错误处理方法

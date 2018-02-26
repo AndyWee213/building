@@ -16,4 +16,6 @@ class BuildingItem(scrapy.Item):
     title = scrapy.Field()
     start = scrapy.Field()
     end = scrapy.Field()
+    province = scrapy.Field()
+    city = scrapy.Field()
     pass
