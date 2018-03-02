@@ -5,6 +5,7 @@
 # Don't forget to add your pipeline to the ITEM_PIPELINES setting
 # See: https://doc.scrapy.org/en/latest/topics/item-pipeline.html
 import MySQLdb.cursors
+import time
 from twisted.enterprise import adbapi
 
 
@@ -42,11 +43,12 @@ class BuildingPipeline(object):
     # SQL语句在这里
     def _conditional_insert(self, tx, item):
         result = tx.execute("select 1 from auctioning_item where id = %(id)s", {"id": item['id']})
+        timestamp = (int(round(time.time() * 1000)))
         if result:
             print("Item already stored in db: %s" % item)
         else:
-            sql = "insert into auctioning_item(id, url, title, sell_start, sell_end, type, state, province, city) values(%s, %s, %s, %s, %s, %s, %s, %s, %s)"
-            params = (item['id'], item['url'], item['title'], item['start'], item['end'], '01', '00', '浙江', '杭州')
+            sql = "insert into auctioning_item(id, url, title, sell_start, sell_end, type, state, province, city, create_time, modify_time) values(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+            params = (item['id'], item['url'], item['title'], item['start'], item['end'], '01', '00', '浙江', '杭州', timestamp, timestamp)
             tx.execute(sql, params)
 
     # 错误处理方法
