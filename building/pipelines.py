@@ -36,21 +36,45 @@ class BuildingPipeline(object):
         return cls(dbpool)  # 相当于dbpool付给了这个类，self中可以得到
 
     def process_item(self, item, spider):
-        query = self.dbpool.runInteraction(self._conditional_insert, item)
-        query.addErrback(self._handle_error, item, spider)
+        if spider.name == 'taobao':
+            query = self.dbpool.runInteraction(self._conditional_insert, item)
+            query.addErrback(self._handle_error, item, spider)
+        if spider.name == 'detail':
+            query = self.dbpool.runInteraction(self._conditional_update, item)
+            query.addErrback(self._handle_error, item, spider)
 
     # 写入数据库中
     # SQL语句在这里
-    def _conditional_insert(self, tx, item):
-        result = tx.execute("select 1 from auctioning_item where id = %(id)s", {"id": item['id']})
+    @staticmethod
+    def _conditional_insert(tx, item):
+        result = tx.execute("select 1 from auctioning_item_detail where id = %(id)s", {"id": item['id']})
         timestamp = (int(round(time.time() * 1000)))
         if result:
-            print("Item already stored in db: %s" % item)
+            print("Item already stored in db: %s" % item['id'])
         else:
-            sql = "insert into auctioning_item(id, url, title, sell_start, sell_end, type, state, province, city, create_time, modify_time) values(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
-            params = (item['id'], item['url'], item['title'], item['start'], item['end'], '01', '00', '浙江', '杭州', timestamp, timestamp)
+            sql = "insert into auctioning_item_detail(id, url, title, sell_start, sell_end, type, state, province, " \
+                  "city, create_time, modify_time, detailed) values(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+            params = (
+                item['id'], item['url'], item['title'], item['start'], item['end'], '01', '00', '浙江', '杭州', timestamp,
+                timestamp, '00')
             tx.execute(sql, params)
 
+    @staticmethod
+    def _conditional_update(tx, item):
+        result = tx.execute("select 1 from auctioning_item_detail where id = %(id)s", {"id": item['id']})
+        timestamp = (int(round(time.time() * 1000)))
+        if result:
+            sql = 'update auctioning_item_detail set start_price = %s, step_price = %s, security_deposit = %s, ' \
+                  'valuation = %s, preferred_customer = %s, sell_org = %s, contact = %s, contact_phone = %s, ' \
+                  'sell_org = %s, detailed = %s, modify_time = %s where id = %s'
+            params = (item['start_price'], item['step_price'], item['security_deposit'], item['valuation'],
+                      item['preferred_customer'], item['sell_org'], item['contact'], item['contact_phone'],
+                      item['sell_org'], '01', timestamp, item['id'])
+            tx.execute(sql, params)
+        else:
+            print("Item does not stored in db: %s" % item['id'])
+
     # 错误处理方法
-    def _handle_error(self, failuer, item, spider):
+    @staticmethod
+    def _handle_error(failuer, item, spider):
         print(failuer)

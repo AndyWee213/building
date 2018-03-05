@@ -18,4 +18,11 @@ class BuildingItem(scrapy.Item):
     end = scrapy.Field()
     province = scrapy.Field()
     city = scrapy.Field()
-    pass
+    start_price = scrapy.Field()
+    step_price = scrapy.Field()
+    security_deposit = scrapy.Field()
+    valuation = scrapy.Field()
+    preferred_customer = scrapy.Field()
+    sell_org = scrapy.Field()
+    contact = scrapy.Field()
+    contact_phone = scrapy.Field()
