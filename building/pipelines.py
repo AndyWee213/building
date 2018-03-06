@@ -64,12 +64,17 @@ class BuildingPipeline(object):
         result = tx.execute("select 1 from auctioning_item_detail where id = %(id)s", {"id": item['id']})
         timestamp = (int(round(time.time() * 1000)))
         if result:
-            sql = 'update auctioning_item_detail set start_price = %s, step_price = %s, security_deposit = %s, ' \
-                  'valuation = %s, preferred_customer = %s, sell_org = %s, contact = %s, contact_phone = %s, ' \
-                  'sell_org = %s, detailed = %s, modify_time = %s where id = %s'
-            params = (item['start_price'], item['step_price'], item['security_deposit'], item['valuation'],
-                      item['preferred_customer'], item['sell_org'], item['contact'], item['contact_phone'],
-                      item['sell_org'], '01', timestamp, item['id'])
+            sql = 'update auctioning_item_detail set sell_type = %s, start_price = %s, step_price = %s, ' \
+                  'security_deposit = %s, valuation = %s, pre_pay = %s, preferred_customer = %s, sell_org = %s, ' \
+                  'contact = %s, contact_phone = %s, sell_org = %s, review_org = %s, detailed = %s, modify_time = %s ' \
+                  'where id = %s'
+            if 'review_org' not in item:
+                item['review_org'] = None
+            if 'pre_pay' not in item:
+                item['pre_pay'] = None
+            params = (item['sell_type'], item['start_price'], item['step_price'], item['security_deposit'],
+                      item['valuation'], item['pre_pay'], item['preferred_customer'], item['sell_org'], item['contact'],
+                      item['contact_phone'], item['sell_org'], item['review_org'], '01', timestamp, item['id'])
             tx.execute(sql, params)
         else:
             print("Item does not stored in db: %s" % item['id'])
@@ -78,3 +83,4 @@ class BuildingPipeline(object):
     @staticmethod
     def _handle_error(failuer, item, spider):
         print(failuer)
+        print(item)

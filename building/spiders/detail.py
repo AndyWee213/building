@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 import re
-import scrapy
-import pymysql
 
-from building import settings
+import pymysql
+import scrapy
+
 from building.items import BuildingItem
 
 
@@ -57,27 +57,50 @@ class DetailSpider(scrapy.Spider):
             if pai_pay_table_cells:
                 for cell in pai_pay_table_cells:
                     label = cell.xpath('./span[1]/text()')
-                    if label and re.sub('\s', '', label.extract()[0]) == '起拍价' and cell.xpath('./span[2]/span/text()'):
-                        item['start_price'] = re.sub('\s', '', cell.xpath('./span[2]/span/text()').extract()[0])
-                    if label and re.sub('\s', '', label.extract()[0]) == '加价幅度' and cell.xpath('./span[2]/span/text()'):
-                        item['step_price'] = re.sub('\s', '', cell.xpath('./span[2]/span/text()').extract()[0])
-                    if label and re.sub('\s', '', label.extract()[0]) == '保证金' and cell.xpath('./span[2]/span/text()'):
-                        item['security_deposit'] = re.sub('\s', '', cell.xpath('./span[2]/span/text()').extract()[0])
-                    if label and re.sub('\s', '', label.extract()[0]) == '优先购买权人':
+                    if label and (self.trim_blank(label.extract()[0]) == '起拍价' or self.trim_blank(
+                            label.extract()[0]) == '变卖价') and cell.xpath('./span[2]/span/text()'):
+                        item['start_price'] = self.trim_blank(cell.xpath('./span[2]/span/text()').extract()[0])
+                    if label and (self.trim_blank(label.extract()[0]) == '起拍价' or self.trim_blank(
+                            label.extract()[0]) == '变卖价') and cell.xpath('./span[2]/span/text()'):
+                        item['start_price'] = self.trim_blank(cell.xpath('./span[2]/span/text()').extract()[0])
+                    if label and self.trim_blank(label.extract()[0]) == '加价幅度' and cell.xpath('./span[2]/span/text()'):
+                        item['step_price'] = self.trim_blank(cell.xpath('./span[2]/span/text()').extract()[0])
+                    if label and self.trim_blank(label.extract()[0]) == '变卖预缴款' and cell.xpath('./span[2]/span/text()'):
+                        item['pre_pay'] = self.trim_blank(cell.xpath('./span[2]/span/text()').extract()[0])
+                    if label and self.trim_blank(label.extract()[0]) == '保证金' and cell.xpath('./span[2]/span/text()'):
+                        item['security_deposit'] = self.trim_blank(cell.xpath('./span[2]/span/text()').extract()[0])
+                    if label and self.trim_blank(label.extract()[0]) == '优先购买权人':
                         if cell.xpath('./span[2]/span/text()'):
-                            item['preferred_customer'] = re.sub('\s', '', cell.xpath('./span[2]/span/text()').extract()[0])
+                            item['preferred_customer'] = \
+                                self.trim_blank(cell.xpath('./span[2]/span/text()').extract()[0])
                         else:
-                            item['preferred_customer'] = re.sub('\s', '', cell.xpath('./span[2]/text()').extract()[0])
-                    if label and re.sub('\s', '', label.extract()[0]) == '评估价' and cell.xpath('./span[2]/span/text()'):
-                        item['valuation'] = re.sub('\s', '', cell.xpath('./span[2]/span/text()').extract()[0])
+                            item['preferred_customer'] = \
+                                re.sub(':', '', self.trim_blank(cell.xpath('./span[2]/text()').extract()[0]))
+                    if label and (self.trim_blank(label.extract()[0]) == '评估价' or self.trim_blank(
+                            label.extract()[0]) == '市场价') and cell.xpath('./span[2]/span/text()'):
+                        item['valuation'] = self.trim_blank(cell.xpath('./span[2]/span/text()').extract()[0])
+                    if label and self.trim_blank(label.extract()[0]) == '类型' and cell.xpath('./span[2]/span/text()'):
+                        item['sell_type'] = self.trim_blank(cell.xpath('./span[2]/span/text()').extract()[0])
 
             pai_info_paragraphs = response.xpath('//div[@class="pai-info"]/p')
+            look_for_review_org = False
             if pai_info_paragraphs:
                 for paragraph in pai_info_paragraphs:
                     label = re.sub('\s', '', paragraph.xpath('./text()').extract()[0]).split('：')
-                    if label[0] == '处置单位' and paragraph.xpath('./a/text()'):
-                        item['sell_org'] = paragraph.xpath('./a/text()').extract()[0]
+                    if label[0] == '处置单位':
+                        if paragraph.xpath('./a'):
+                            item['sell_org'] = self.trim_blank(paragraph.xpath('./a/text()').extract()[0])
+                        else:
+                            item['sell_org'] = self.trim_blank(paragraph.xpath('./text()').extract()[0]).split('：')[1]
+                            look_for_review_org = True
                     if label[0] == '联系咨询方式' and paragraph.xpath('./em/text()'):
-                        item['contact'] = paragraph.xpath('./em/text()').extract()[0]
-                        item['contact_phone'] = label[1]
+                        item['contact'] = paragraph.xpath('./em/text()').extract()[0].strip()
+                        item['contact_phone'] = paragraph.xpath('./text()').extract()[1].strip()
+
+            if look_for_review_org and response.xpath('//div[@class="pai-info"]/text()'):
+                item['review_org'] = self.trim_blank(response.xpath('//div[@class="pai-info"]/a/text()').extract()[0])
             yield item
+
+    @staticmethod
+    def trim_blank(param):
+        return re.sub('\s', '', param)
