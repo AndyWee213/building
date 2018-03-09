@@ -20,7 +20,7 @@ class DetailSpider(scrapy.Spider):
     def get_urls():
         # 读取settings中配置的数据库参数
         records = {}
-        connection = pymysql.connect(host='172.28.128.3',
+        connection = pymysql.connect(host='192.168.255.10',
                                      user='root',
                                      password='123456',
                                      port=3306,

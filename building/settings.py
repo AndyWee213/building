@@ -91,7 +91,7 @@ ROBOTSTXT_OBEY = True
 ITEM_PIPELINES = {'building.pipelines.BuildingPipeline': 100}
 
 #Mysql数据库的配置信息
-MYSQL_HOST = '172.28.128.3'
+MYSQL_HOST = '192.168.255.10'
 MYSQL_DBNAME = 'shancha_taobao'
 MYSQL_USER = 'root'
 MYSQL_PASSWD = '123456'
