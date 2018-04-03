@@ -33,7 +33,7 @@ class TaobaoSpider(scrapy.Spider):
                 yield scrapy.Request('https:' + each_item['itemUrl'],
                                      meta={'id': each_item['id'], 'url': 'https:' + each_item['itemUrl'],
                                            'title': each_item['title'], 'start': each_item['start'],
-                                           'end': each_item['end']}, callback = self.parse_item)
+                                           'end': each_item['end']}, callback=self.parse_item)
         next_page_url = response.xpath('//div[@class="pagination J_Pagination"]/a[@class="next"]/@href').extract()
         if next_page_url:
             yield scrapy.Request('https:' + next_page_url[0].strip(), headers=self.headers)
