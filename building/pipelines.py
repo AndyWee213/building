@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 
+import time
+
 # Define your item pipelines here
 #
 # Don't forget to add your pipeline to the ITEM_PIPELINES setting
 # See: https://doc.scrapy.org/en/latest/topics/item-pipeline.html
-import MySQLdb.cursors
-import time
+import pymysql
 from twisted.enterprise import adbapi
 
 
@@ -29,55 +30,40 @@ class BuildingPipeline(object):
             passwd=settings['MYSQL_PASSWD'],
             port=settings['MYSQL_PORT'],
             charset='utf8',  # 编码要加上，否则可能出现中文乱码问题
-            cursorclass=MySQLdb.cursors.DictCursor,
+            cursorclass=pymysql.cursors.DictCursor,
             use_unicode=False,
         )
-        dbpool = adbapi.ConnectionPool('MySQLdb', **dbparams)  # **表示将字典扩展为关键字参数,相当于host=xxx,db=yyy....
+        dbpool = adbapi.ConnectionPool('pymysql', **dbparams)  # **表示将字典扩展为关键字参数,相当于host=xxx,db=yyy....
         return cls(dbpool)  # 相当于dbpool付给了这个类，self中可以得到
 
     def process_item(self, item, spider):
         if spider.name == 'taobao':
             query = self.dbpool.runInteraction(self._conditional_insert, item)
             query.addErrback(self._handle_error, item, spider)
-        if spider.name == 'detail':
-            query = self.dbpool.runInteraction(self._conditional_update, item)
-            query.addErrback(self._handle_error, item, spider)
 
     # 写入数据库中
     # SQL语句在这里
     @staticmethod
     def _conditional_insert(tx, item):
-        result = tx.execute("select 1 from auctioning_item_detail where id = %(id)s", {"id": item['id']})
+        result = tx.execute("select 1 from auctioning_item where id = %(id)s", {"id": item['id']})
         timestamp = (int(round(time.time() * 1000)))
         if result:
             print("Item already stored in db: %s" % item['id'])
         else:
-            sql = "insert into auctioning_item_detail(id, url, title, sell_start, sell_end, type, state, province, " \
-                  "city, create_time, modify_time, detailed) values(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
-            params = (
-                item['id'], item['url'], item['title'], item['start'], item['end'], '01', '00', '浙江', '杭州', timestamp,
-                timestamp, '00')
-            tx.execute(sql, params)
-
-    @staticmethod
-    def _conditional_update(tx, item):
-        result = tx.execute("select 1 from auctioning_item_detail where id = %(id)s", {"id": item['id']})
-        timestamp = (int(round(time.time() * 1000)))
-        if result:
-            sql = 'update auctioning_item_detail set sell_type = %s, start_price = %s, step_price = %s, ' \
-                  'security_deposit = %s, valuation = %s, pre_pay = %s, preferred_customer = %s, sell_org = %s, ' \
-                  'contact = %s, contact_phone = %s, sell_org = %s, review_org = %s, detailed = %s, modify_time = %s ' \
-                  'where id = %s'
+            sql = "insert into auctioning_item(id, url, title, sell_start, sell_end, type, state, province, " \
+                  "city, sell_type, start_price, step_price, security_deposit, valuation, pre_pay, preferred_customer, " \
+                  "sell_org, review_org, contact, contact_phone, create_time, modify_time) " \
+                  "values(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
             if 'review_org' not in item:
                 item['review_org'] = None
             if 'pre_pay' not in item:
                 item['pre_pay'] = None
-            params = (item['sell_type'], item['start_price'], item['step_price'], item['security_deposit'],
-                      item['valuation'], item['pre_pay'], item['preferred_customer'], item['sell_org'], item['contact'],
-                      item['contact_phone'], item['sell_org'], item['review_org'], '01', timestamp, item['id'])
+            params = (
+                item['id'], item['url'], item['title'], item['start'], item['end'], '01', '00', '浙江', '杭州',
+                item['sell_type'], item['start_price'], item['step_price'], item['security_deposit'], item['valuation'],
+                item['pre_pay'], item['preferred_customer'], item['sell_org'], item['review_org'], item['contact'],
+                item['contact_phone'], timestamp, timestamp)
             tx.execute(sql, params)
-        else:
-            print("Item does not stored in db: %s" % item['id'])
 
     # 错误处理方法
     @staticmethod

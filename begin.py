@@ -3,4 +3,4 @@
 
 from scrapy import cmdline
 
-cmdline.execute("scrapy crawl detail".split())
+cmdline.execute("scrapy crawl taobao --nolog".split())
